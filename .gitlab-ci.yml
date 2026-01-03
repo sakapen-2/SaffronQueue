@@ -1,0 +1,47 @@
+stages:
+  - test
+  - build
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_API: "$CI_REGISTRY_IMAGE/api"
+  IMAGE_WORKER: "$CI_REGISTRY_IMAGE/worker"
+
+cache:
+  paths:
+    - .cache/pip
+
+test_api:
+  stage: test
+  image: python:3.11
+  before_script:
+    - pip install -U pip
+    - pip install -U pytest
+    - pip install -e ./api
+  script:
+    - pytest -q
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+docker_build:
+  stage: build
+  image: docker:24
+  services:
+    - name: docker:24-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+  script:
+    - docker build -t "$IMAGE_API:$CI_COMMIT_SHA" ./api
+    - docker build -t "$IMAGE_WORKER:$CI_COMMIT_SHA" ./worker
+    - docker push "$IMAGE_API:$CI_COMMIT_SHA"
+    - docker push "$IMAGE_WORKER:$CI_COMMIT_SHA"
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        docker tag "$IMAGE_API:$CI_COMMIT_SHA" "$IMAGE_API:latest"
+        docker tag "$IMAGE_WORKER:$CI_COMMIT_SHA" "$IMAGE_WORKER:latest"
+        docker push "$IMAGE_API:latest"
+        docker push "$IMAGE_WORKER:latest"
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH
