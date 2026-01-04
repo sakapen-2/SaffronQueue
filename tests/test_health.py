@@ -1,5 +1,10 @@
 from fastapi.testclient import TestClient
-from api.app.main import app
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "api"))
+
+from app.main import app  
 
 client = TestClient(app)
 
