@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: saffron
+      POSTGRES_PASSWORD: saffron
+      POSTGRES_DB: saffronqueue
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saffron -d saffronqueue"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: "${REGISTRY_IMAGE}/api:${IMAGE_TAG}"
+    environment:
+      DATABASE_URL: postgresql+psycopg://saffron:saffron@postgres:5432/saffronqueue
+      REDIS_URL: redis://redis:6379/0
+      JOB_QUEUE: job_queue
+      JOB_PROCESSING: job_processing
+      JOB_DLQ: job_dlq
+      JOB_DELAYED: job_delayed
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    image: "${REGISTRY_IMAGE}/worker:${IMAGE_TAG}"
+    environment:
+      DATABASE_URL: postgresql+psycopg://saffron:saffron@postgres:5432/saffronqueue
+      REDIS_URL: redis://redis:6379/0
+      JOB_QUEUE: job_queue
+      JOB_PROCESSING: job_processing
+      JOB_DLQ: job_dlq
+      JOB_DELAYED: job_delayed
+      LOG_LEVEL: INFO
+      WORKER_POLL_SECONDS: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

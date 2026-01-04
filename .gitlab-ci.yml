@@ -1,46 +1,8 @@
 stages:
   - test
   - build
+  - deploy
 
-variables:
-  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
-  IMAGE_API: "$CI_REGISTRY_IMAGE/api"
-  IMAGE_WORKER: "$CI_REGISTRY_IMAGE/worker"
-
-cache:
-  paths:
-    - .cache/pip
-
-test_api:
-  stage: test
-  image: python:3.11
-  before_script:
-    - pip install -U pip
-    - pip install -U pytest
-    - pip install -e ./api
-  script:
-    - pytest -q
-  rules:
-    - if: $CI_COMMIT_BRANCH
-
-build_images:
-  stage: build
-  image: docker:24
-  services:
-    - name: docker:24-dind
-      alias: docker
-      command:
-        - "--insecure-registry=registry.pengu.local"
-        - "--host=tcp://0.0.0.0:2375"
-  variables:
-    DOCKER_HOST: "tcp://docker:2375"
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - docker info | sed -n '/Insecure Registries/,+5p'
-    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "registry.pengu.local"
-  script:
-    - docker build -t "registry.pengu.local/root/saffronqueue/api:$CI_COMMIT_SHA" ./api
-    - docker build -t "registry.pengu.local/root/saffronqueue/worker:$CI_COMMIT_SHA" ./worker
-    - docker push "registry.pengu.local/root/saffronqueue/api:$CI_COMMIT_SHA"
-    - docker push "registry.pengu.local/root/saffronqueue/worker:$CI_COMMIT_SHA"
-
+include:
+  - local: .gitlab/ci.yml
+  - local: .gitlab/cd.yml
