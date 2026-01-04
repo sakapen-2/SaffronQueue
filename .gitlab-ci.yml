@@ -29,6 +29,9 @@ docker_build:
   image: docker:24
   services:
     - name: docker:24-dind
+      command: ["--insecure-registry=registry.pengu.local"]
+  variables:
+    DOCKER_TLS_CERTDIR: ""
   before_script:
     - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
   script:
