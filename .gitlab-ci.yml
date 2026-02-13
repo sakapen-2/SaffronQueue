@@ -1,8 +1,0 @@
-stages:
-  - test
-  - build
-  - deploy
-
-include:
-  - local: .gitlab/ci.yml
-  - local: .gitlab/cd.yml
