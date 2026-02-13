@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: {{ .Values.worker.image }}
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg://saffron:saffron@postgres:5432/saffronqueue
+            - name: REDIS_URL
+              value: redis://redis:6379/0
