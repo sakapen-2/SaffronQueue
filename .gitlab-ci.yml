@@ -1,8 +1,14 @@
 stages:
-  - test
-  - build
-  - deploy
+  build
 
-include:
-  - local: .gitlab/ci.yml
-  - local: .gitlab/cd.yml
+build:
+  stage: build
+  script:
+    - echo $CI_REGISTRY_PASS |  docker login -u $CI_REGISTRY_USER --password-stdin $CI_DOCKER_REGISTRY
+    - docker build -t $CI_DOCKER_REGISTRY/worker:$CI_COMMIT_SHA ./worker
+    - docker push $CI_DOCKER_REGISTRY/worker:$CI_COMMIT_SHA
+
+
+
+  only:
+    - test
